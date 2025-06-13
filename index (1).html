@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>P2P视频流播放器</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+        color: #fff;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 20px;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        width: 100%;
+        max-width: 900px;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        background: linear-gradient(45deg, #ff8a00, #e52e71);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        display: inline-block;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 900px;
+        gap: 20px;
+      }
+
+      .player-container {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        position: relative;
+      }
+
+      #videoPlayer {
+        width: 100%;
+        height: 500px;
+        background: #000;
+        display: block;
+      }
+
+      .player-overlay {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 15px;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 30px;
+        z-index: 10;
+        font-size: 0.9rem;
+      }
+
+      .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .connection-status .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #aaa;
+      }
+
+      .connection-status .connected {
+        background: #00ff00;
+      }
+
+      .quality-selector {
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        border: 1px solid #ff8a00;
+        padding: 3px 10px;
+        border-radius: 15px;
+        font-size: 0.9rem;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background: rgba(0, 0, 0, 0.8);
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .control-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      .btn {
+        background: linear-gradient(45deg, #ff8a00, #e52e71);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 30px;
+        cursor: pointer;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition:
+          transform 0.2s,
+          background 0.3s;
+        font-size: 0.9rem;
+      }
+
+      .btn:hover {
+        transform: translateY(-3px);
+        background: linear-gradient(45deg, #ff7700, #d81b60);
+      }
+
+      .btn:active {
+        transform: translateY(1px);
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.25);
+      }
+
+      .progress-container {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.1);
+        height: 6px;
+        border-radius: 3px;
+        cursor: pointer;
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #ff8a00, #e52e71);
+        width: 0%;
+        border-radius: 3px;
+        transition: width 0.1s;
+      }
+
+      .stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        width: 100%;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .stat-card {
+        flex: 1;
+        min-width: 200px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 10px;
+        text-align: center;
+        transition: transform 0.3s;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .stat-card h3 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+        color: #ff8a00;
+      }
+
+      .stat-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        background: linear-gradient(45deg, #00c9ff, #92fe9d);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .stat-unit {
+        font-size: 0.9rem;
+        color: #aaa;
+      }
+
+      .info {
+        background: rgba(0, 0, 0, 0.4);
+        padding: 20px;
+        border-radius: 15px;
+        width: 100%;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .info h2 {
+        margin-bottom: 15px;
+        color: #ff8a00;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .info p {
+        line-height: 1.6;
+        margin-bottom: 15px;
+      }
+
+      .tech-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .tech-item {
+        background: rgba(255, 138, 0, 0.2);
+        padding: 8px 15px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .url-box {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-family: monospace;
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      footer {
+        margin-top: 30px;
+        text-align: center;
+        padding: 20px;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+      }
+
+      .loading {
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 5;
+      }
+
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 4px solid #ff8a00;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .error-message {
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(200, 0, 0, 0.8);
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        z-index: 10;
+        max-width: 90%;
+      }
+
+      .btn-error {
+        margin-top: 15px;
+        background: #ff8a00;
+      }
+
+      @media (max-width: 768px) {
+        #videoPlayer {
+          height: 300px;
+        }
+
+        .controls {
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        .player-overlay {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 5px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1><i class="fas fa-wifi"></i> P2P视频流播放器</h1>
+      <p>基于WebRTC的P2P技术实现高效视频流分发</p>
+    </header>
+
+    <div class="container">
+      <div class="player-container">
+        <video id="videoPlayer" controls></video>
+        <div class="player-overlay">
+          <div class="connection-status">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <span id="connectionStatus">连接中...</span>
+          </div>
+          <select class="quality-selector" id="qualitySelector">
+            <option value="">自动选择</option>
+          </select>
+        </div>
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <p>正在连接P2P网络...</p>
+        </div>
+        <div class="error-message" id="errorMessage">
+          <h3><i class="fas fa-exclamation-triangle"></i> 播放错误</h3>
+          <p id="errorText">无法加载视频流，请检查网络连接</p>
+          <button class="btn btn-error" id="retryBtn">重试连接</button>
+        </div>
+        <div class="controls">
+          <div class="control-group">
+            <button class="btn" id="playBtn">
+              <i class="fas fa-play"></i> 播放
+            </button>
+            <button class="btn" id="pauseBtn">
+              <i class="fas fa-pause"></i> 暂停
+            </button>
+            <button class="btn" id="muteBtn">
+              <i class="fas fa-volume-up"></i> 静音
+            </button>
+          </div>
+          <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <div class="control-group">
+            <button class="btn btn-secondary" id="restartBtn">
+              <i class="fas fa-redo"></i> 重播
+            </button>
+            <button class="btn" id="fullscreenBtn">
+              <i class="fas fa-expand"></i> 全屏
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <h3><i class="fas fa-cloud-download-alt"></i> CDN下载量</h3>
+          <div class="stat-value" id="cdnDownload">0.00</div>
+          <div class="stat-unit">MB</div>
+        </div>
+        <div class="stat-card">
+          <h3><i class="fas fa-share-alt"></i> P2P下载量</h3>
+          <div class="stat-value" id="p2pDownload">0.00</div>
+          <div class="stat-unit">MB</div>
+        </div>
+        <div class="stat-card">
+          <h3><i class="fas fa-upload"></i> 上传量</h3>
+          <div class="stat-value" id="uploaded">0.00</div>
+          <div class="stat-unit">MB</div>
+        </div>
+        <div class="stat-card">
+          <h3><i class="fas fa-users"></i> 节点数</h3>
+          <div class="stat-value" id="peers">0</div>
+          <div class="stat-unit">个</div>
+        </div>
+      </div>
+
+      <div class="info">
+        <h2><i class="fas fa-info-circle"></i> 技术说明</h2>
+        <p>
+          本播放器使用HLS.js结合P2P技术实现流媒体播放。通过WebRTC技术建立点对点连接，观众之间可以共享视频数据，大幅降低服务器带宽压力。
+        </p>
+        <p>当前播放地址：</p>
+        <div class="url-box" id="currentUrl"></div>
+
+        <div class="tech-list">
+          <div class="tech-item"><i class="fab fa-html5"></i> HTML5 Video</div>
+          <div class="tech-item"><i class="fas fa-bolt"></i> HLS.js</div>
+          <div class="tech-item"><i class="fas fa-share-alt"></i> WebRTC</div>
+          <div class="tech-item">
+            <i class="fas fa-network-wired"></i> P2P Media Loader
+          </div>
+          <div class="tech-item"><i class="fas fa-chart-bar"></i> 实时统计</div>
+          <div class="tech-item"><i class="fas fa-sync-alt"></i> 自动重连</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>© 2025 P2P视频流播放器 | 基于WebRTC技术实现</p>
+    </footer>
+    <script type="importmap">
+      {
+        "imports": {
+          "hls.js": "https://cdn.jsdelivr.net/npm/hls.js@1.6.5/+esm",
+          "p2p-media-loader-core": "https://cdn.jsdelivr.net/npm/p2p-media-loader-core@2.2.1/dist/p2p-media-loader-core.es.min.js",
+          "p2p-media-loader-hlsjs": "https://cdn.jsdelivr.net/npm/p2p-media-loader-hlsjs@2.2.1/dist/p2p-media-loader-hlsjs.es.min.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import Hls from 'hls.js';
+      import { HlsJsP2PEngine } from 'p2p-media-loader-hlsjs';
+
+      document.addEventListener('DOMContentLoaded', function () {
+        // DOM元素引用
+        const video = document.getElementById('videoPlayer');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const retryBtn = document.getElementById('retryBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const qualitySelector = document.getElementById('qualitySelector');
+        const currentUrl = document.getElementById('currentUrl');
+
+        // 统计元素
+        const cdnDownload = document.getElementById('cdnDownload');
+        const p2pDownload = document.getElementById('p2pDownload');
+        const uploaded = document.getElementById('uploaded');
+        const peers = document.getElementById('peers');
+
+        // 统计变量
+        let cdnBytes = 0;
+        let p2pBytes = 0;
+        let uploadedBytes = 0;
+        let peerCount = 0;
+
+        // 播放器状态
+        let isMuted = false;
+        let hls = null;
+        const videoUrl = new URLSearchParams(location.search).get('src');
+        if (!videoUrl) {
+          alert('没有播放地址');
+          throw new Error('没有播放地址');
+        }
+        currentUrl.innerText = videoUrl;
+
+        // 显示加载状态
+        loading.style.display = 'block';
+        errorMessage.style.display = 'none';
+
+        // 更新统计数据
+        function updateStats() {
+          cdnDownload.textContent = (cdnBytes / (1024 * 1024)).toFixed(2);
+          p2pDownload.textContent = (p2pBytes / (1024 * 1024)).toFixed(2);
+          uploaded.textContent = (uploadedBytes / (1024 * 1024)).toFixed(2);
+          peers.textContent = peerCount;
+        }
+
+        // 设置连接状态
+        function setConnectionStatus(status, isConnected = false) {
+          connectionStatus.textContent = status;
+          statusIndicator.className =
+            'status-indicator ' + (isConnected ? 'connected' : '');
+        }
+
+        // 显示错误
+        function showError(message) {
+          errorText.textContent = message;
+          errorMessage.style.display = 'block';
+          loading.style.display = 'none';
+        }
+
+        // 隐藏错误
+        function hideError() {
+          errorMessage.style.display = 'none';
+        }
+
+        // 初始化播放器
+        function initPlayer() {
+          hideError();
+          loading.style.display = 'block';
+
+          // 重置统计
+          cdnBytes = 0;
+          p2pBytes = 0;
+          uploadedBytes = 0;
+          peerCount = 0;
+          updateStats();
+
+          // 检查浏览器是否支持HLS
+          if (Hls.isSupported()) {
+            const HlsWithP2P = HlsJsP2PEngine.injectMixin(Hls);
+            // Assuming the STUN server list is stored as a string variable
+            const stunList = `23.21.150.121:3478
+                            iphone-stun.strato-iphone.de:3478
+                            numb.viagenie.ca:3478
+                            s1.taraba.net:3478
+                            s2.taraba.net:3478
+                            stun.12connect.com:3478
+                            stun.12voip.com:3478
+                            stun.1und1.de:3478
+                            stun.2talk.co.nz:3478
+                            stun.2talk.com:3478
+                            stun.3clogic.com:3478
+                            stun.3cx.com:3478
+                            stun.a-mm.tv:3478
+                            stun.aa.net.uk:3478
+                            stun.acrobits.cz:3478
+                            stun.actionvoip.com:3478
+                            stun.advfn.com:3478
+                            stun.aeta-audio.com:3478
+                            stun.aeta.com:3478
+                            stun.alltel.com.au:3478`;
+            hls = new HlsWithP2P({
+              p2p: {
+                core: {
+                  announceTrackers: [
+                    'wss://tracker.openwebtorrent.com',
+                    'wss://tracker.webtorrent.dev',
+                    'wss://tracker.novage.com.ua',
+                  ],
+                  rtcConfig: {
+                    iceServers: stunList
+                      .trim()
+                      .split('\n')
+                      .map((server) => server.trim())
+                      .filter((line) => line)
+                      .map((server) => ({
+                        urls: `stun:${server}`,
+                      })),
+                  },
+                  swarmId: 'p2p-video-player',
+                },
+                onHlsJsCreated(hls) {
+                  console.log(hls);
+                  // 监听P2P事件
+                  hls.p2pEngine.addEventListener('onPeerConnect', (event) => {
+                    console.log('P2P 节点连接:', event.peerId);
+                    peerCount++;
+                    setConnectionStatus(`已连接 (${peerCount}节点)`);
+                    peers.textContent = peerCount;
+                  });
+
+                  hls.p2pEngine.addEventListener('onPeerError', (event) => {
+                    console.warn('P2P 节点错误:', event.peerId);
+                  });
+
+                  hls.p2pEngine.addEventListener('onPeerClose', (event) => {
+                    console.log('P2P 节点断开:', event.peerId);
+                    peerCount = Math.max(0, peerCount - 1);
+                    setConnectionStatus(
+                      peerCount > 0
+                        ? `已连接 (${peerCount}节点)`
+                        : '正在连接节点...',
+                    );
+                    peers.textContent = peerCount;
+                  });
+
+                  hls.p2pEngine.addEventListener(
+                    'onChunkDownloaded',
+                    (bytesLength, downloadSource, peerId) => {
+                      if (downloadSource === 'p2p') {
+                        console.log('P2P节点 下载数据 peerId', peerId);
+                        p2pBytes += bytesLength;
+                      } else {
+                        console.log('CDN节点 下载数据');
+                        cdnBytes += bytesLength;
+                      }
+                      updateStats();
+                    },
+                  );
+
+                  hls.p2pEngine.addEventListener(
+                    'onChunkUploaded',
+                    (bytesLength, peerId) => {
+                      console.log('P2P节点 上传数据成功 peerId', peerId);
+                      uploadedBytes += bytesLength;
+                      updateStats();
+                    },
+                  );
+
+                  hls.p2pEngine.addEventListener('onTrackerError', (event) => {
+                    console.warn('Tracker 错误:', event);
+                  });
+
+                  hls.p2pEngine.addEventListener(
+                    'onTrackerWarning',
+                    (event) => {
+                      console.warn('Tracker 警告:', event);
+                    },
+                  );
+
+                  hls.p2pEngine.addEventListener('onSegmentLoaded', (event) => {
+                    console.log('分片加载:', event);
+                  });
+                },
+              },
+            });
+            hls.attachMedia(video);
+            // 加载视频源
+            hls.loadSource(videoUrl);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+              loading.style.display = 'none';
+              setConnectionStatus('已连接', true);
+              console.log('视频流加载完成');
+
+              // 填充质量选择器
+              qualitySelector.innerHTML = '<option value="">自动选择</option>';
+              if (hls.levels && hls.levels.length > 0) {
+                hls.levels.forEach((level, index) => {
+                  const option = document.createElement('option');
+                  option.value = index;
+                  option.textContent =
+                    level.height +
+                    'p (' +
+                    Math.round(level.bitrate / 1000) +
+                    ' kbps)';
+                  qualitySelector.appendChild(option);
+                });
+              }
+            });
+
+            hls.on(Hls.Events.LEVEL_SWITCHED, function (event, data) {
+              const level = hls.levels[data.level];
+              if (level) {
+                console.log('切换到质量: ' + level.height + 'p');
+              }
+            });
+
+            hls.on(Hls.Events.ERROR, function (event, data) {
+              console.error('播放器错误:', data);
+              if (data.fatal) {
+                switch (data.type) {
+                  case Hls.ErrorTypes.NETWORK_ERROR:
+                    showError('网络错误: ' + data.details);
+                    break;
+                  case Hls.ErrorTypes.MEDIA_ERROR:
+                    showError('媒体错误: ' + data.details);
+                    break;
+                  default:
+                    showError('播放错误: ' + data.details);
+                    break;
+                }
+              }
+            });
+          } else {
+            showError('您的浏览器不支持HLS视频播放');
+          }
+        }
+
+        // 初始化播放器
+        initPlayer();
+
+        // 播放按钮事件
+        playBtn.addEventListener('click', function () {
+          video.play().catch((e) => console.error('播放失败:', e));
+        });
+
+        // 暂停按钮事件
+        pauseBtn.addEventListener('click', function () {
+          video.pause();
+        });
+
+        // 静音按钮事件
+        muteBtn.addEventListener('click', function () {
+          isMuted = !isMuted;
+          video.muted = isMuted;
+          muteBtn.innerHTML = isMuted
+            ? '<i class="fas fa-volume-mute"></i> 取消静音'
+            : '<i class="fas fa-volume-up"></i> 静音';
+        });
+
+        // 重播按钮事件
+        restartBtn.addEventListener('click', function () {
+          if (video.currentTime > 0) {
+            video.currentTime = 0;
+            video.play();
+          }
+        });
+
+        // 全屏按钮事件
+        fullscreenBtn.addEventListener('click', function () {
+          if (video.requestFullscreen) {
+            video.requestFullscreen();
+          } else if (video.mozRequestFullScreen) {
+            video.mozRequestFullScreen();
+          } else if (video.webkitRequestFullscreen) {
+            video.webkitRequestFullscreen();
+          } else if (video.msRequestFullscreen) {
+            video.msRequestFullscreen();
+          }
+        });
+
+        // 进度条点击事件
+        progressContainer.addEventListener('click', function (e) {
+          const rect = progressContainer.getBoundingClientRect();
+          const pos = (e.clientX - rect.left) / rect.width;
+          video.currentTime = pos * video.duration;
+        });
+
+        // 视频进度更新
+        video.addEventListener('timeupdate', function () {
+          const percent = (video.currentTime / video.duration) * 100;
+          progressBar.style.width = percent + '%';
+        });
+
+        // 质量选择器事件
+        qualitySelector.addEventListener('change', function () {
+          if (hls) {
+            hls.currentLevel = this.value ? parseInt(this.value) : -1; // -1 表示自动选择
+          }
+        });
+
+        // 重试按钮事件
+        retryBtn.addEventListener('click', function () {
+          if (hls) {
+            hls.destroy();
+          }
+          initPlayer();
+        });
+
+        // 设置初始状态
+        setConnectionStatus('正在连接...');
+      });
+    </script>
+  </body>
+</html>
